@@ -262,14 +262,122 @@
 
     // ── Answer dispatch ────────────────────────────────────────
     function handleAnswer() {
-        if (useAI) {
-            tryAIAnswer();
+        const qType = detectQuestionType();
+        log("Question type detected:", qType);
+
+        if (qType === "numeric") {
+            if (useAI) {
+                tryAIAnswerNumeric();
+            } else {
+                log("Numeric question but AI not enabled — skipping (cannot guess a number).");
+            }
         } else {
-            selectAnswer();
+            // multiple choice (default)
+            if (useAI) {
+                tryAIAnswer();
+            } else {
+                selectAnswer();
+            }
         }
     }
 
-    // ── AI path ───────────────────────────────────────────────
+    /**
+     * Detect whether the current question is numeric, multiple-choice, etc.
+     * Returns "numeric" | "multiple_choice"
+     */
+    function detectQuestionType() {
+        // The banner element shows "Numeric", "Multiple Choice", etc.
+        const banner = document.querySelector(
+            ".question-type-graded-banner, [class*='question-type-graded-banner']"
+        );
+        if (banner) {
+            const text = banner.textContent.trim().toLowerCase();
+            if (text.includes("numeric")) return "numeric";
+        }
+
+        // Also check for numeric input field presence
+        const numericInput = document.querySelector(
+            "#numericAnswerInput, input[name='numeric-answer'], .numeric-answer-textarea input[type='text']"
+        );
+        if (numericInput) return "numeric";
+
+        return "multiple_choice";
+    }
+
+    // ── AI path — numeric ─────────────────────────────────────
+    function tryAIAnswerNumeric() {
+        const qData = parseNumericQuestion();
+        if (!qData) {
+            log("Could not parse numeric question.");
+            return;
+        }
+        log("Sending numeric question to AI:", qData);
+        safeChrome(() => chrome.runtime.sendMessage({ type: "sendQuestionToAI", question: qData }));
+    }
+
+    /**
+     * Parse a numeric question for the AI.
+     */
+    function parseNumericQuestion() {
+        // Get all visible text in the question area
+        const questionContainer = document.querySelector(
+            ".question-data-container, app-numeric-answer-question, .question-type-container"
+        );
+        const questionText = questionContainer
+            ? questionContainer.innerText.trim()
+            : document.querySelector(".center-buttons")?.innerText.trim() || "";
+
+        if (!questionText) return null;
+
+        return {
+            type: "numeric",
+            question: questionText,
+            options: [],
+            previousCorrection: null,
+            instruction: "This is a numeric free-response question. Reply ONLY with valid JSON like {\"answer\":\"42.5\"} where the value is the numeric answer as a string. No units unless part of the number, no explanation.",
+        };
+    }
+
+    /**
+     * Type a numeric answer into the iClicker input and submit it.
+     */
+    function submitNumericAnswer(value) {
+        const input = document.querySelector(
+            "#numericAnswerInput, input[name='numeric-answer'], .numeric-answer-textarea input[type='text']"
+        );
+        if (!input) {
+            log("Could not find numeric input field");
+            return;
+        }
+
+        log("Submitting numeric answer:", value);
+        input.focus();
+
+        // Use React/Angular compatible value setting
+        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+        if (nativeSetter) {
+            nativeSetter.call(input, value);
+        } else {
+            input.value = value;
+        }
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+
+        // Click the Send Answer button
+        setTimeout(() => {
+            const sendBtn = document.querySelector(
+                "button.button.primary.rounded-button, button[class*='primary'][class*='rounded'], .answer-controls-container button[type='button']:not([disabled])"
+            );
+            if (sendBtn && !sendBtn.disabled) {
+                log("Clicking Send Answer button");
+                safeClick(sendBtn);
+            } else {
+                log("Could not find Send Answer button");
+            }
+        }, 400);
+    }
+
+    // ── AI path — multiple choice ──────────────────────────────
     function tryAIAnswer() {
         const qData = parseQuestion();
         if (!qData) {
@@ -318,17 +426,27 @@
     }
 
     /**
-     * Parse AI JSON response and click the matching button.
-     * Tries text-match first, then letter index, then falls back to A.
+     * Parse AI JSON response and handle based on question type.
+     * For numeric: types the answer into the input.
+     * For multiple choice: clicks the matching button.
      */
     function clickAIAnswer(responseText) {
+        const qType = detectQuestionType();
+
         try {
             const cleaned = responseText.replace(/```json|```/g, "").trim();
             const parsed = JSON.parse(cleaned);
             const raw = Array.isArray(parsed.answer) ? parsed.answer[0] : parsed.answer;
             const answer = String(raw).trim();
+            log("AI answered:", answer, "| question type:", qType);
+
+            if (qType === "numeric") {
+                submitNumericAnswer(answer);
+                return;
+            }
+
+            // Multiple choice handling
             const letter = answer.toUpperCase().charAt(0);
-            log("AI picked:", answer);
 
             // First try: match by button text content
             const containers = document.querySelectorAll(".btn-container");
@@ -352,7 +470,7 @@
 
         } catch (e) {
             log("AI parse error:", e.message, "| raw:", responseText);
-            selectAnswer();
+            if (qType !== "numeric") selectAnswer();
         }
     }
 
