@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ByeClicker – Settings</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: white;
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+    .container { max-width: 520px; margin: 0 auto; }
+    h1 { font-size: 22px; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; opacity: 0.6; margin-bottom: 28px; }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+    .card h2 { font-size: 14px; margin-bottom: 14px; opacity: 0.85; letter-spacing: 0.5px; text-transform: uppercase; }
+    .row { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .row:last-child { margin-bottom:0; }
+    .label { font-size:13px; }
+    .desc { font-size:11px; opacity:0.5; margin-top:2px; }
+
+    /* Toggle switch */
+    .toggle { position:relative; width:40px; height:22px; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .slider {
+      position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+      background: rgba(255,255,255,0.2);
+      border-radius: 22px;
+      transition: .3s;
+    }
+    .slider:before {
+      position:absolute; content:"";
+      height:16px; width:16px; left:3px; bottom:3px;
+      background:white; border-radius:50%;
+      transition: .3s;
+    }
+    input:checked + .slider { background: linear-gradient(135deg,#4d6bfe,#a855f7); }
+    input:checked + .slider:before { transform: translateX(18px); }
+
+    /* Model pills */
+    .pills { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .pill {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pill.active { background: #4d6bfe; border-color: #4d6bfe; }
+    .pill:hover:not(.active) { background: rgba(255,255,255,0.1); }
+
+    /* Input */
+    input[type="email"], input[type="text"] {
+      width:100%; padding:8px 12px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.2);
+      background:rgba(255,255,255,0.08);
+      color:white; font-size:13px; outline:none;
+    }
+    input::placeholder { color:rgba(255,255,255,0.35); }
+    input:focus { border-color:#4d6bfe; }
+
+    .save-btn {
+      width:100%; padding:12px;
+      background: linear-gradient(135deg,#4d6bfe,#a855f7);
+      border:none; border-radius:10px;
+      color:white; font-size:14px; font-weight:600;
+      cursor:pointer; transition:opacity 0.2s;
+      margin-top:10px;
+    }
+    .save-btn:hover { opacity:0.88; }
+    .saved-msg { text-align:center; font-size:12px; color:#a0ffb0; margin-top:8px; display:none; }
+    .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+    .dot-green { background:#4caf50; }
+    .dot-red   { background:#f44336; }
+    #ai-tab-status { font-size:12px; margin-top:8px; opacity:0.8; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>⚙ ByeClicker Settings</h1>
+  <p class="subtitle">Configure auto-answering behaviour and notifications</p>
+
+  <!-- AI Settings -->
+  <div class="card">
+    <h2>🤖 AI Answering</h2>
+    <div class="row">
+      <div>
+        <div class="label">Use AI to Answer</div>
+        <div class="desc">Sends questions to your open AI tab</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="useAI"/>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="label" style="font-size:12px; opacity:0.7; margin-bottom:6px;">AI Model:</div>
+    <div class="pills">
+      <button class="pill" id="pill-chatgpt"  data-model="chatgpt">ChatGPT</button>
+      <button class="pill" id="pill-gemini"   data-model="gemini">Gemini</button>
+      <button class="pill" id="pill-deepseek" data-model="deepseek">DeepSeek</button>
+    </div>
+    <div id="ai-tab-status"></div>
+  </div>
+
+  <!-- General -->
+  <div class="card">
+    <h2>🎯 General</h2>
+    <div class="row">
+      <div>
+        <div class="label">Randomize Answers</div>
+        <div class="desc">Pick a random option instead of always A</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="random"/>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">Auto Join Class</div>
+        <div class="desc">Automatically joins when class starts</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="autoJoin"/>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div class="card">
+    <h2>🔔 Notifications</h2>
+    <div class="row">
+      <div>
+        <div class="label">Email Notifications</div>
+        <div class="desc">Get notified when class starts or a question appears</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="notify"/>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div style="margin-top:10px;">
+      <input type="email" id="email" placeholder="your@email.com"/>
+    </div>
+  </div>
+
+  <button class="save-btn" id="save-btn">Save Settings</button>
+  <p class="saved-msg" id="saved-msg">✓ Settings saved!</p>
+</div>
+
+<script>
+  const modelPills = document.querySelectorAll('.pill');
+
+  function updateActivePill(model) {
+    modelPills.forEach(p => p.classList.toggle('active', p.dataset.model === model));
+  }
+
+  function checkAITab(model) {
+    const urlMap = {
+      chatgpt:  'https://chatgpt.com/*',
+      gemini:   'https://gemini.google.com/*',
+      deepseek: 'https://chat.deepseek.com/*',
+    };
+    const nameMap = { chatgpt:'ChatGPT', gemini:'Gemini', deepseek:'DeepSeek' };
+    chrome.tabs.query({ url: urlMap[model] }, (tabs) => {
+      const el = document.getElementById('ai-tab-status');
+      if (tabs.length) {
+        el.innerHTML = `<span class="status-dot dot-green"></span>✓ ${nameMap[model]} tab is open`;
+      } else {
+        el.innerHTML = `<span class="status-dot dot-red"></span>Open ${nameMap[model]} in another tab first`;
+      }
+    });
+  }
+
+  modelPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      const model = pill.dataset.model;
+      chrome.storage.sync.set({ aiModel: model });
+      updateActivePill(model);
+      checkAITab(model);
+    });
+  });
+
+  // Load saved settings
+  chrome.storage.local.get(['random','autoJoin','notify','email','useAI'], (r) => {
+    document.getElementById('random').checked   = !!r.random;
+    document.getElementById('autoJoin').checked = !!r.autoJoin;
+    document.getElementById('notify').checked   = !!r.notify;
+    document.getElementById('useAI').checked    = !!r.useAI;
+    document.getElementById('email').value      = r.email || '';
+  });
+  chrome.storage.sync.get('aiModel', ({ aiModel }) => {
+    const model = aiModel || 'chatgpt';
+    updateActivePill(model);
+    checkAITab(model);
+  });
+
+  // Save
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const data = {
+      random:   document.getElementById('random').checked,
+      autoJoin: document.getElementById('autoJoin').checked,
+      notify:   document.getElementById('notify').checked,
+      useAI:    document.getElementById('useAI').checked,
+      email:    document.getElementById('email').value,
+    };
+    chrome.storage.local.set(data, () => {
+      const msg = document.getElementById('saved-msg');
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 2500);
+    });
+  });
+</script>
+</body>
+</html>
