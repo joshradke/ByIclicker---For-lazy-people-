@@ -6,11 +6,17 @@
 (function () {
   "use strict";
 
-  const SYSTEM_PROMPT =
+  const MC_SYSTEM_PROMPT =
     'You are answering a multiple-choice poll question. ' +
     'Reply ONLY with valid JSON like {"answer":"B"} — ' +
     'no explanation, no markdown, just the JSON object. ' +
     'Pick the single best letter answer.';
+
+  const NUMERIC_SYSTEM_PROMPT =
+    'You are answering a numeric free-response question from a physics/science class. ' +
+    'Solve the problem and reply ONLY with valid JSON like {"answer":"42.5"} — ' +
+    'the value should be the numeric answer as a plain number string (digits and decimal point only, no units). ' +
+    'No explanation, no markdown, just the JSON object.';
 
   function alive() {
     try { return !!chrome.runtime.id; } catch(e) { return false; }
@@ -18,7 +24,18 @@
 
   // Build the full prompt string to type into ChatGPT
   function buildPrompt(qData) {
-    let text = SYSTEM_PROMPT + '\n\n';
+    const isNumeric = qData.type === 'numeric';
+
+    if (isNumeric) {
+      let text = NUMERIC_SYSTEM_PROMPT + '\n\n';
+      text += 'Question:\n' + (qData.question || '') + '\n';
+      if (qData.instruction) text += '\n' + qData.instruction;
+      text += '\n\nRespond with JSON only: {"answer":"<number>"}';
+      return text;
+    }
+
+    // Multiple choice
+    let text = MC_SYSTEM_PROMPT + '\n\n';
     if (qData.question) text += 'Question: ' + qData.question + '\n';
     if (qData.options && qData.options.length) {
       const letters = ['A','B','C','D','E'];
@@ -101,12 +118,19 @@
     return last.textContent.trim();
   }
 
-  // Parse whatever the AI returned and extract a letter
+  // Parse whatever the AI returned and extract an answer (letter or number)
   function extractAnswer(rawText) {
-    const jsonMatch = rawText.match(/\{[^}]*"answer"\s*:\s*"([A-Ea-e])"[^}]*\}/);
+    // Try JSON with answer field first (handles both letters and numbers)
+    const jsonMatch = rawText.match(/\{[^}]*"answer"\s*:\s*"([^"]+)"[^}]*\}/);
     if (jsonMatch) {
-      return JSON.stringify({ answer: jsonMatch[1].toUpperCase() });
+      return JSON.stringify({ answer: jsonMatch[1] });
     }
+    // Numeric answer fallback (e.g. 968555.66)
+    const numMatch = rawText.match(/\b(\d[\d.eE+\-]*)\b/);
+    if (numMatch) {
+      return JSON.stringify({ answer: numMatch[1] });
+    }
+    // Letter answer fallback
     const letterMatch = rawText.match(/\b([A-E])\b/);
     if (letterMatch) {
       return JSON.stringify({ answer: letterMatch[1].toUpperCase() });
